@@ -32,7 +32,7 @@ if uploaded:
         for i, slide in enumerate(prs.slides):
             title = slide.shapes.title.text if slide.shapes.title else ""
             if not title.strip():
-                issues.append(f"Slide {i+1}: Missing title")
+                issues.append((i+1, "Missing title"))
 
         # RULE 2 — Title must be Title Case
         def is_title_case(text):
@@ -42,18 +42,18 @@ if uploaded:
             if slide.shapes.title:
                 title = slide.shapes.title.text.strip()
                 if title and not is_title_case(title):
-                    issues.append(f"Slide {i+1}: Title not in Title Case")
+                    issues.append((i+1, "Title not in Title Case"))
 
-        # RULE 3 — No more than 6 lines of text (per text frame)
+        # RULE 3 — No more than 6 lines of text
         for i, slide in enumerate(prs.slides):
             for shape in slide.shapes:
                 if shape.has_text_frame:
                     lines = [p.text for p in shape.text_frame.paragraphs if p.text.strip()]
                     if len(lines) > 6:
-                        issues.append(f"Slide {i+1}: Too many lines of text in a block ({len(lines)})")
+                        issues.append((i+1, f"Too many lines of text in a block ({len(lines)})"))
                         break
 
-        # RULE 4 — No more than 40 words total per slide
+        # RULE 4 — No more than 40 words total
         for i, slide in enumerate(prs.slides):
             word_count = 0
             for shape in slide.shapes:
@@ -61,9 +61,9 @@ if uploaded:
                     for p in shape.text_frame.paragraphs:
                         word_count += len(p.text.split())
             if word_count > 40:
-                issues.append(f"Slide {i+1}: Too many words on slide ({word_count})")
+                issues.append((i+1, f"Too many words on slide ({word_count})"))
 
-        # RULE 5 — No red text (safe colour handling)
+        # RULE 5 — No red text (safe version)
         for i, slide in enumerate(prs.slides):
             for shape in slide.shapes:
                 if shape.has_text_frame:
@@ -72,16 +72,16 @@ if uploaded:
                             color = run.font.color
                             if color is not None and hasattr(color, "rgb") and color.rgb:
                                 if str(color.rgb) == "FF0000":
-                                    issues.append(f"Slide {i+1}: Contains red text")
+                                    issues.append((i+1, "Contains red text"))
                                     break
 
         # RULE 6 — Logo or image must appear (simple heuristic)
         for i, slide in enumerate(prs.slides):
-            has_image = any(shape.shape_type == 13 for shape in slide.shapes)  # 13 = PICTURE
+            has_image = any(shape.shape_type == 13 for shape in slide.shapes)
             if not has_image:
-                issues.append(f"Slide {i+1}: No logo or image detected")
+                issues.append((i+1, "No logo or image detected"))
 
-        # RULE 7 — Slide numbers must exist (simple heuristic)
+        # RULE 7 — Slide numbers must exist
         for i, slide in enumerate(prs.slides):
             has_number = False
             for shape in slide.shapes:
@@ -91,7 +91,7 @@ if uploaded:
                         has_number = True
                         break
             if not has_number:
-                issues.append(f"Slide {i+1}: Missing slide number")
+                issues.append((i+1, "Missing slide number"))
 
         # --- OUTPUT / UX ---
 
@@ -100,21 +100,23 @@ if uploaded:
         if issues:
             st.error(f"Issues found: {len(issues)}")
 
-            # Group issues by slide label "Slide X"
+            # Group issues by slide number
             slides_dict = {}
-            for issue in issues:
-                slide_label = issue.split(":")[0]  # "Slide X"
-                slides_dict.setdefault(slide_label, []).append(issue)
+            for slide_num, issue_text in issues:
+                slides_dict.setdefault(slide_num, []).append(issue_text)
 
-            for slide_label, slide_issues in slides_dict.items():
-                with st.expander(slide_label, expanded=False):
-                    for issue in slide_issues:
-                        st.checkbox(issue, value=False, key=issue)
+            for slide_num, slide_issues in slides_dict.items():
+                with st.expander(f"Slide {slide_num}", expanded=False):
+                    for idx, issue_text in enumerate(slide_issues):
+                        unique_key = f"slide{slide_num}_issue{idx}"
+                        st.checkbox(issue_text, value=False, key=unique_key)
+
         else:
             st.success("No issues found! This deck meets the current ACME rules.")
 
     except Exception as e:
         st.error(f"Could not read PPTX: {e}")
+
 
 
 
