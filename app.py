@@ -51,15 +51,17 @@ if uploaded:
             if word_count > 40:
                 issues.append(f"Slide {i+1}: Too many words ({word_count})")
 
-        # RULE 5 — No red text
-        for i, slide in enumerate(prs.slides):
-            for shape in slide.shapes:
-                if shape.has_text_frame:
-                    for p in shape.text_frame.paragraphs:
-                        for run in p.runs:
-                            if run.font.color and run.font.color.rgb and str(run.font.color.rgb) == "FF0000":
-                                issues.append(f"Slide {i+1}: Contains red text")
-                                break
+       # RULE 5 — No red text (safe version)
+for i, slide in enumerate(prs.slides):
+    for shape in slide.shapes:
+        if shape.has_text_frame:
+            for p in shape.text_frame.paragraphs:
+                for run in p.runs:
+                    color = run.font.color
+                    if color and hasattr(color, "rgb") and color.rgb:
+                        if str(color.rgb) == "FF0000":
+                            issues.append(f"Slide {i+1}: Contains red text")
+                            break
 
         # RULE 6 — Logo must appear (simple heuristic)
         for i, slide in enumerate(prs.slides):
