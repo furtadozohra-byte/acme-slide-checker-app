@@ -10,19 +10,23 @@ if uploaded:
         prs = Presentation(uploaded)
         st.success("File loaded successfully!")
         st.write(f"Slides detected: {len(prs.slides)}")
+
+        # --- RULES START HERE ---
+        issues = []
+
+        for i, slide in enumerate(prs.slides):
+            title = slide.shapes.title.text if slide.shapes.title else ""
+            if not title.strip():
+                issues.append(f"Slide {i+1} has no title")
+
+        if issues:
+            st.error("Issues found:")
+            for issue in issues:
+                st.write(f"- {issue}")
+        else:
+            st.success("No issues found!")
+        # --- RULES END HERE ---
+
     except Exception as e:
         st.error(f"Could not read PPTX: {e}")
-st.write(f"Slides detected: {len(prs.slides)}")
-issues = []
 
-for i, slide in enumerate(prs.slides):
-    title = slide.shapes.title.text if slide.shapes.title else ""
-    if not title.strip():
-        issues.append(f"Slide {i+1} has no title")
-
-if issues:
-    st.error("Issues found:")
-    for issue in issues:
-        st.write(f"- {issue}")
-else:
-    st.success("No issues found!")
